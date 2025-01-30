@@ -15,8 +15,24 @@ class GeneradorRecibos:
             alignment=1,
             spaceAfter=30
         )
-        self.columnas_requeridas = ['FECHA', 'NOMBRE', 'DEPTO', 'TELF', 'EXPENSA', 'AGUA', 'MULTA']
+        self.columnas_requeridas = ['FECHA', 'NOMBRE', 'DEPTO', 'TELF', 'EXPENSA', 'MULTA']
+        self.datos_agua = self.cargar_datos_agua('resultado_agua.csv')  # Nueva línea
 
+    # --- NUEVO MÉTODO PARA CARGAR DATOS DE AGUA ---
+    def cargar_datos_agua(self, csv_path):
+        """Carga los datos de agua desde el CSV generado"""
+        datos_agua = {}
+        try:
+            with open(csv_path, 'r', encoding='utf-8') as f:
+                reader = csv.DictReader(f)
+                for row in reader:
+                    datos_agua[row['Depto']] = row['Monto']
+            print("Datos de agua cargados correctamente")
+            return datos_agua
+        except Exception as e:
+            print(f"Error cargando datos de agua: {e}")
+            return {}
+        
     def generar_recibo(self, datos_apartamento, nombre_archivo):
         """
         Genera un recibo de pago en PDF para un apartamento.
@@ -110,10 +126,9 @@ class GeneradorRecibos:
         nombre_limpio = self.limpiar_nombre_columna(nombre)
         return row.get(nombre_limpio) or row.get('\ufeff' + nombre_limpio)
 
+    # --- MODIFICACIÓN EN PROCESAR_CSV ---
     def procesar_csv(self, archivo_csv):
-        """
-        Lee un archivo CSV y genera recibos para todos los apartamentos.
-        """
+        """Lee un archivo CSV y genera recibos para todos los apartamentos."""
         if not os.path.exists(archivo_csv):
             print(f"Error: No se encontró el archivo {archivo_csv}")
             return
@@ -124,10 +139,10 @@ class GeneradorRecibos:
             os.makedirs(directorio_recibos)
 
         try:
-            with open(archivo_csv, 'r', encoding='utf-8-sig') as file:  # Usando utf-8-sig para manejar BOM
+            with open(archivo_csv, 'r', encoding='utf-8-sig') as file:
                 reader = csv.DictReader(file, delimiter=';')
                 
-                # Verificar que todas las columnas requeridas estén presentes
+                # Verificar columnas requeridas
                 columnas_encontradas = [self.limpiar_nombre_columna(col) for col in reader.fieldnames]
                 print(f"Columnas en el archivo (limpias): {columnas_encontradas}")
                 
@@ -140,10 +155,18 @@ class GeneradorRecibos:
 
                 for row in reader:
                     try:
-                        # Crear una copia limpia del diccionario
                         row_limpia = {self.limpiar_nombre_columna(k): v for k, v in row.items()}
                         
-                        nombre_archivo = f"recibos/recibo_depto_{row_limpia['DEPTO']}_{row_limpia['FECHA'].replace('/', '_')}.pdf"
+                        # --- NUEVA LÓGICA DE INTEGRACIÓN DE AGUA ---
+                        depto = row_limpia['DEPTO']
+                        if depto in self.datos_agua:
+                            row_limpia['AGUA'] = self.datos_agua[depto]
+                            print(f"Actualizado valor de agua para departamento {depto}")
+                        else:
+                            print(f"Advertencia: No se encontró agua para departamento {depto}")
+                            row_limpia['AGUA'] = '0.00'  # Valor por defecto
+                        
+                        nombre_archivo = f"recibos/recibo_depto_{depto}_{row_limpia['FECHA'].replace('/', '_')}.pdf"
                         self.generar_recibo(row_limpia, nombre_archivo)
                         print(f"Recibo generado: {nombre_archivo}")
                     except Exception as e:
@@ -157,3 +180,4 @@ class GeneradorRecibos:
 if __name__ == "__main__":
     generador = GeneradorRecibos()
     generador.procesar_csv('apartamentos.csv')
+    

@@ -34,8 +34,14 @@ Para instalar la dependencia necesaria:
 pip install reportlab
 ```
 
+## Funcionamiento paso - paso
+
+1. Subir csv con valores (Expensa - Multa)
+2. subir PDF (agua)
+3. Generar recibo
+
 ## Mejoras Futuras
 
-- [ ] Anexar valor variable del precio del agua.
+- [x] Anexar valor variable del precio del agua.
 - [ ] Generacion y anexar QR al recibo de pago.
 - [ ] Funcionalidad para enviar recibos por WhatsApp automáticamente.
